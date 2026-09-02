@@ -10,7 +10,7 @@ public static class SerilogExtensions
     /// <summary>
     /// Adds the Serilog OpenTelemetry sink when an OTLP endpoint is configured.
     /// </summary>
-    public static IConfigurationManager AddCaskoOpenTelemetrySink(this IConfigurationManager configuration)
+    public static IConfigurationManager AddOpinionatedOpenTelemetrySink(this IConfigurationManager configuration)
     {
         var otlpEndpoint = configuration["OTEL_EXPORTER_OTLP_ENDPOINT"];
         if (string.IsNullOrWhiteSpace(otlpEndpoint))
