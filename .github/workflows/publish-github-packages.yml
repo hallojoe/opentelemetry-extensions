@@ -1,0 +1,134 @@
+name: Publish NuGet packages to GitHub Packages and NuGet
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: read
+  id-token: write
+  packages: write
+
+env:
+  DOTNET_VERSION: 10.0.x
+  GITHUB_PACKAGE_SOURCE: https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json
+  NUGET_PACKAGE_SOURCE: https://api.nuget.org/v3/index.json
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: ${{ env.DOTNET_VERSION }}
+
+      - name: Derive and validate package version
+        id: versioning
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          TAG="${{ github.event.release.tag_name }}"
+          TARGET_BRANCH="${{ github.event.release.target_commitish }}"
+
+          echo "Release tag: $TAG"
+          echo "Target branch: $TARGET_BRANCH"
+
+          if [[ ! "$TAG" =~ ^v.+ ]]; then
+            echo "::error::Release tag must start with 'v'. Got: $TAG"
+            exit 1
+          fi
+
+          VERSION="${TAG#v}"
+
+          if [[ ! "$VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+(-[0-9A-Za-z][0-9A-Za-z.-]*)?$ ]]; then
+            echo "::error::Derived version is not valid: $VERSION"
+            exit 1
+          fi
+
+          if [[ "$VERSION" == *-* ]]; then
+            IS_PRERELEASE=true
+          else
+            IS_PRERELEASE=false
+          fi
+
+          if [[ "$IS_PRERELEASE" == "false" && "$TARGET_BRANCH" != "main" ]]; then
+            echo "::error::Stable releases are only allowed from 'main'. Tag '$TAG' targets '$TARGET_BRANCH'."
+            exit 1
+          fi
+
+          if [[ "$IS_PRERELEASE" == "true" && "$TARGET_BRANCH" == "main" ]]; then
+            echo "::error::Prerelease versions are not allowed from 'main'. Tag '$TAG' targets '$TARGET_BRANCH'."
+            exit 1
+          fi
+
+          echo "package_version=$VERSION" >> "$GITHUB_OUTPUT"
+          echo "is_prerelease=$IS_PRERELEASE" >> "$GITHUB_OUTPUT"
+
+      - name: Restore
+        run: dotnet restore src/Casko.OpenTelemetry.Extensions.slnx
+
+      - name: Pack
+        run: |
+          dotnet pack src/Casko.OpenTelemetry.Extensions.AspNetCore/Casko.OpenTelemetry.Extensions.AspNetCore.csproj \
+            --configuration Release \
+            --no-restore \
+            -p:Version=${{ steps.versioning.outputs.package_version }} \
+            -o ./artifacts
+          dotnet pack src/Casko.OpenTelemetry.Extensions.Serilog/Casko.OpenTelemetry.Extensions.Serilog.csproj \
+            --configuration Release \
+            --no-restore \
+            -p:Version=${{ steps.versioning.outputs.package_version }} \
+            -o ./artifacts
+
+      - name: Verify packages
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          expected=(
+            "Casko.OpenTelemetry.Extensions.AspNetCore.${{ steps.versioning.outputs.package_version }}.nupkg"
+            "Casko.OpenTelemetry.Extensions.Serilog.${{ steps.versioning.outputs.package_version }}.nupkg"
+          )
+
+          for package in "${expected[@]}"; do
+            if [[ ! -f "./artifacts/$package" ]]; then
+              echo "::error::Expected package was not produced: $package"
+              exit 1
+            fi
+          done
+
+      - name: Push packages to GitHub Packages
+        shell: bash
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          dotnet nuget push ./artifacts/*.nupkg \
+            --source "${{ env.GITHUB_PACKAGE_SOURCE }}" \
+            --api-key "$GITHUB_TOKEN" \
+            --skip-duplicate
+
+      - name: Push packages to NuGet
+        shell: bash
+        env:
+          NUGET_API_KEY: ${{ secrets.NUGET_TOKEN }}
+        run: |
+          set -euo pipefail
+
+          dotnet nuget push ./artifacts/*.nupkg \
+            --source "${{ env.NUGET_PACKAGE_SOURCE }}" \
+            --api-key "$NUGET_API_KEY" \
+            --skip-duplicate
+
+      - name: Summarize
+        run: |
+          echo "Published version: ${{ steps.versioning.outputs.package_version }}"
+          echo "Prerelease: ${{ steps.versioning.outputs.is_prerelease }}"
+          echo "Packages: Casko.OpenTelemetry.Extensions.AspNetCore and Casko.OpenTelemetry.Extensions.Serilog"

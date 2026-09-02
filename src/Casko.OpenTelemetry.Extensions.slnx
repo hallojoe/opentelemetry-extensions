@@ -1,0 +1,4 @@
+<Solution>
+  <Project Path="Casko.OpenTelemetry.Extensions.AspNetCore\Casko.OpenTelemetry.Extensions.AspNetCore.csproj" />
+  <Project Path="Casko.OpenTelemetry.Extensions.Serilog\Casko.OpenTelemetry.Extensions.Serilog.csproj" />
+</Solution>
