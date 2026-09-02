@@ -18,14 +18,14 @@ dotnet add package Casko.OpenTelemetry.Extensions.Serilog
 
 ## ASP.NET Core instrumentation
 
-Call `AddCaskoOpenTelemetry` immediately after creating the `WebApplicationBuilder`:
+Call `AddOpinionatedOpenTelemetry` immediately after creating the `WebApplicationBuilder`:
 
 ```csharp
 using Casko.OpenTelemetry.Extensions.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.AddCaskoOpenTelemetry();
+builder.AddOpinionatedOpenTelemetry();
 
 var app = builder.Build();
 app.MapGet("/", () => "Hello, world!");
@@ -57,12 +57,12 @@ using Casko.OpenTelemetry.Extensions.Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddCaskoOpenTelemetrySink();
+builder.Configuration.AddOpinionatedOpenTelemetrySink();
 
 // Configure Serilog from builder.Configuration in your normal application setup.
 ```
 
-When `OTEL_EXPORTER_OTLP_ENDPOINT` has a value, `AddCaskoOpenTelemetrySink` adds the `Serilog.Sinks.OpenTelemetry` sink and sets its endpoint to that value. When the endpoint is missing or empty, it makes no configuration changes.
+When `OTEL_EXPORTER_OTLP_ENDPOINT` has a value, `AddOpinionatedOpenTelemetrySink` adds the `Serilog.Sinks.OpenTelemetry` sink and sets its endpoint to that value. When the endpoint is missing or empty, it makes no configuration changes.
 
 ## Combined setup
 
@@ -74,8 +74,8 @@ using Casko.OpenTelemetry.Extensions.Serilog;
 
 var builder = WebApplication.CreateBuilder(args);
 
-builder.Configuration.AddCaskoOpenTelemetrySink();
-builder.AddCaskoOpenTelemetry();
+builder.Configuration.AddOpinionatedOpenTelemetrySink();
+builder.AddOpinionatedOpenTelemetry();
 
 // Configure Serilog from builder.Configuration in your normal application setup.
 

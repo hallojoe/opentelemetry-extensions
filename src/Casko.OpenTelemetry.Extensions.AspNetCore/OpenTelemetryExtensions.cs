@@ -13,7 +13,7 @@ public static class OpenTelemetryExtensions
     /// Adds ASP.NET Core, HTTP client, and runtime instrumentation. When an OTLP endpoint is configured,
     /// traces and metrics are exported to it.
     /// </summary>
-    public static WebApplicationBuilder AddCaskoOpenTelemetry(this WebApplicationBuilder builder)
+    public static WebApplicationBuilder AddOpinionatedOpenTelemetry(this WebApplicationBuilder builder)
     {
         var hasOtlpExporter = !string.IsNullOrWhiteSpace(builder.Configuration["OTEL_EXPORTER_OTLP_ENDPOINT"]);
 
